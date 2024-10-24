@@ -1,8 +1,8 @@
 {
-  "name": "m3yoyo",
-  "version": "0.1.0",
-  "homepage": "http://scotteadams.github.io/m3yoyo",
-  "private": true,
+  "name": "m3u-editor",
+  "version": "1.0.0",
+  "homepage": "https://github.com/MSerj/m3u-editor",
+  "private": false,
   "dependencies": {
     "@material-ui/core": "^4.9.8",
     "@material-ui/icons": "^4.9.1",
@@ -14,19 +14,19 @@
     "cross-fetch": "^3.0.4",
     "directory-tree": "^2.2.4",
     "fs": "^0.0.1-security",
-    "m3u8-file-parser": "^0.2.3",
+    "lodash-es": "^4.17.21",
+    "m3u-parser-generator": "^2.0.0",
     "material-table": "^1.57.2",
-    "material-ui-dropzone": "^2.4.9",
+    "material-ui-dropzone": "^3.5.0",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
-    "react-scripts": "3.4.1",
+    "react-scripts": "^5.0.1",
     "react-window": "^1.8.5",
     "store2": "^2.11.0",
     "use-persisted-state": "^0.3.0"
   },
   "scripts": {
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
@@ -52,7 +52,6 @@
     ]
   },
   "devDependencies": {
-    "gh-pages": "^2.2.0",
     "prettier": "2.0.2"
   }
 }

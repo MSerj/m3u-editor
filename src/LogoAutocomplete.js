@@ -14,8 +14,8 @@ function renderRow(props) {
     return React.cloneElement(data[index], {
         style: {
             ...style,
-            top: style.top + LISTBOX_PADDING
-        }
+            top: style.top + LISTBOX_PADDING,
+        },
     })
 }
 
@@ -26,7 +26,10 @@ const OuterElementType = React.forwardRef((props, ref) => {
     return <div ref={ref} {...props} {...outerProps} />
 })
 
-const ListboxComponent = React.forwardRef(function ListboxComponent(props, ref) {
+const ListboxComponent = React.forwardRef(function ListboxComponent(
+    props,
+    ref
+) {
     const { children, ...other } = props
     const itemData = React.Children.toArray(children)
     const theme = useTheme()
@@ -50,7 +53,7 @@ const ListboxComponent = React.forwardRef(function ListboxComponent(props, ref) 
     }
 
     return (
-        <div ref={ref} style={{backgroundColor: '#3d3d3d'}}>
+        <div ref={ref} style={{ backgroundColor: '#3d3d3d' }}>
             <OuterElementContext.Provider value={other}>
                 <VariableSizeList
                     itemData={itemData}
@@ -74,7 +77,9 @@ const LogoAutocomplete = (props) => {
     return (
         <Autocomplete
             value={props.value}
-            onChange={(e,v) => {props.onChange(v)}}
+            onChange={(e, v) => {
+                props.onChange(v)
+            }}
             freeSolo
             id="logo-select"
             disableClearable
@@ -82,7 +87,11 @@ const LogoAutocomplete = (props) => {
             autoSelect
             ListboxComponent={ListboxComponent}
             options={logos.map((option) => option.url)}
-            renderOption={(option) => <img src={option} style={{ width: 70 }}/>}
+            renderOption={(option) =>
+                console.log('option', option) || (
+                    <img src={option} style={{ width: 70 }} alt={option} />
+                )
+            }
             renderInput={(params) => (
                 <TextField
                     {...params}
@@ -90,7 +99,7 @@ const LogoAutocomplete = (props) => {
                     variant="outlined"
                     inputProps={{
                         ...params.inputProps,
-                        autoComplete: 'new-password' // disable autocomplete and autofill
+                        autoComplete: 'new-password', // disable autocomplete and autofill
                     }}
                 />
             )}

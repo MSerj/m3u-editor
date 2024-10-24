@@ -13,20 +13,20 @@ const App = () => {
 
     return (
         <div className="App">
-            <header className="App-header">
-            </header>
+            <header className="App-header"></header>
             <main>
                 <AppBar position="static">
                     <Toolbar>
-                        <Typography variant="h6">
-                            m3yoyo
-                        </Typography>
-                        <IconButton className={classes.goRight} href='https://github.com/ScottEAdams/m3yoyo'>
-                            <GitHubIcon/>
+                        <Typography variant="h6">m3u-editor</Typography>
+                        <IconButton
+                            className={classes.goRight}
+                            href="https://github.com/MSerj/m3u-editor"
+                        >
+                            <GitHubIcon />
                         </IconButton>
                     </Toolbar>
                 </AppBar>
-                <M3U/>
+                <M3U />
             </main>
         </div>
     )

@@ -1,10 +1,12 @@
 import { Box } from '@material-ui/core'
+import TextField from '@material-ui/core/TextField'
+import { omit } from 'lodash-es'
 import { DropzoneArea } from 'material-ui-dropzone'
 import MaterialTable from 'material-table'
 import Container from '@material-ui/core/Container'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { m3uDataState, m3uFilenameState, m3uOriginalState } from './LocalStore'
-import M3U8FileParser from 'm3u8-file-parser'
+import { M3uParser, M3uPlaylist } from 'm3u-parser-generator'
 import LogoAutocomplete from './LogoAutocomplete'
 import { useStyles } from './styles'
 import arrayMove from 'array-move'
@@ -15,11 +17,35 @@ import DialogContentText from '@material-ui/core/DialogContentText'
 import DialogTitle from '@material-ui/core/DialogTitle'
 import Button from '@material-ui/core/Button'
 
+const changeEnabledState = (
+    newState, // null = toggle
+    m3uData,
+    reSortData,
+    setWorkaround,
+    tableRef
+) => (evt, data) => {
+    let rows = m3uData.rows
+    const length = rows.length
+    data.forEach((d) => {
+        const index = rows.indexOf(d)
+        d.enabled = newState === null ? !d.enabled : newState
+        rows[index] = d
+        rows = arrayMove(rows, index, length)
+        rows = reSortData(rows)
+    })
+    setWorkaround({
+        data: { rows },
+        resolve: () => {},
+    })
+    tableRef.current.onAllSelected(false)
+}
+
 const M3U = (props) => {
     const classes = useStyles()
 
     let fileReader
 
+    const inputRef = useRef()
     const tableRef = useRef()
 
     const [m3uFilename, setM3uFilename] = m3uFilenameState(null)
@@ -31,7 +57,7 @@ const M3U = (props) => {
     // https://github.com/mbrn/material-table/issues/1325
     const [workaround, setWorkaround] = useState({
         data: null,
-        resolve: null
+        resolve: null,
     })
 
     const [confirmOpen, setConfirmOpen] = useState(false)
@@ -51,99 +77,81 @@ const M3U = (props) => {
 
     const readFile = (e) => {
         const content = fileReader.result
-        const reader = new M3U8FileParser()
-        reader.read(content)
-        const result = reader.getResult()
+        const result = M3uParser.parse(content)
         if (result) {
             setM3uOriginal(result)
         }
     }
 
     const newFile = (e) => {
+        if (!e.length) return
         fileReader = new FileReader()
         fileReader.onloadend = readFile
         fileReader.readAsText(e[0])
         setM3uFilename(e[0].name)
     }
 
-    useEffect(() => {
-        if (m3uOriginal) {
-            setupTableColumns()
-        }
-    }, [m3uOriginal])
-
-    useEffect(() => {
-        if (m3uOriginal && !m3uData) {
-            setupTableData()
-        }
-    }, [m3uOriginal, m3uData])
-
-    useEffect(() => {
-        if (workaround.data) {
-            setM3uData(workaround.data)
-            workaround.resolve()
-            setRefreshKey(Math.random())
-        }
-    }, [workaround])
-
-    const setupTableColumns = () => {
+    const setupTableColumns = useCallback(() => {
         const columnsSet = new Set()
         columnsSet.add('sort')
         columnsSet.add('enabled')
-        m3uOriginal.segments.forEach((segment, idx) => {
-            if (segment.inf) {
-                Object.keys(segment.inf).forEach((i) => {
-                    columnsSet.add(i)
-                })
-            }
-        })
-        columnsSet.delete('duration')
+        columnsSet.add('name')
+        columnsSet.add('group')
+
         const columnsArray = []
-        columnsSet.forEach((c) => {
-            if (c === 'sort') {
+        columnsSet.forEach((column) => {
+            if (column === 'sort') {
                 columnsArray.push({
-                    title: c,
-                    field: c,
-                    defaultSort: 'asc'
+                    title: column,
+                    field: column,
+                    defaultSort: 'asc',
                 })
-            } else if (c === 'enabled') {
+            } else if (column === 'enabled') {
                 columnsArray.push({
-                    title: c,
-                    field: c,
-                    type: 'boolean'
+                    title: column,
+                    field: column,
+                    type: 'boolean',
                 })
-            } else if (c === 'tvgLogo') {
+            } else if (column === 'tvgLogo') {
                 columnsArray.push({
-                    title: c,
-                    field: c,
-                    render: rowData => <img src={rowData.tvgLogo} style={{ width: 70 }}/>,
-                    editComponent: (props) => <LogoAutocomplete
-                        value={props.value}
-                        onChange={e => props.onChange(e)}
-                    />
+                    title: column,
+                    field: column,
+                    render: (rowData) => (
+                        <img
+                            src={rowData.tvgLogo}
+                            style={{ width: 70 }}
+                            alt="tvgLogo"
+                        />
+                    ),
+                    editComponent: (props) => (
+                        <LogoAutocomplete
+                            value={props.value}
+                            onChange={(e) => props.onChange(e)}
+                        />
+                    ),
                 })
             } else {
                 columnsArray.push({
-                    title: c,
-                    field: c
+                    title: column,
+                    field: column,
                 })
             }
         })
         setColumns(columnsArray)
-    }
+    }, [])
 
-    const setupTableData = () => {
+    const setupTableData = useCallback(() => {
         const dataArray = []
-        m3uOriginal.segments.forEach((segment, idx) => {
+        m3uOriginal.medias.forEach((media, idx) => {
             dataArray.push({
                 sort: idx + 1,
                 enabled: true,
-                url: segment.url,
-                ...segment.inf
+                url: media.location,
+                ...media,
             })
         })
         setM3uData({ rows: dataArray })
-    }
+    }, [m3uOriginal, setM3uData])
 
     const reSortData = (data) => {
         return data.map((d, idx) => {
@@ -152,7 +160,7 @@ const M3U = (props) => {
         })
     }
 
-    const onRowAdd = newData =>
+    const onRowAdd = (newData) =>
         new Promise((resolve, reject) => {
             let data = m3uData.rows
             data.push(newData)
@@ -160,7 +168,7 @@ const M3U = (props) => {
             setWorkaround({ data: { rows: data }, resolve: resolve })
         })
 
-    const onRowDelete = oldData =>
+    const onRowDelete = (oldData) =>
         new Promise((resolve, reject) => {
             let data = m3uData.rows
             const index = data.indexOf(oldData)
@@ -203,41 +211,53 @@ const M3U = (props) => {
         }
     }
 
-    const camelToKebab = (string) => {
-        return string.replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2').toLowerCase()
-    }
-
-    const rowToString = (row) => {
-        let str = ''
-        for (let p in row) {
-            if (row.hasOwnProperty(p)) {
-                str += ` ${camelToKebab(p)}="${row[p]}"`
-            }
-        }
-        return str
-    }
-
     const exportFunction = (columns, data) => {
-        let content = '#EXTM3U\r\n'
-        data.forEach(row => {
-            let title = ''
-            if (row.title) {
-                title = `,${row.title}`
-                delete row.title
-            }
-            const duration = row.duration
-            const url = row.url
-            const enabled = row.enabled ? '' : '#'
-            delete row.duration
-            delete row.enabled
-            delete row.url
-            delete row.sort
-            delete row.tableData
-
-            content += `${enabled}#EXTINF:${duration}${rowToString(row)}${title}\r\n${enabled}${url}\r\n`
+        let content = '#EXTM3U\r\n' // start of the file
+        data.forEach((row) => {
+            const enabled = row.enabled ? '' : '# '
+            content += `${enabled}#EXTINF:${row.duration},${row.name}\r\n#EXTGRP:${row.group}\r\n${enabled}${row.location}\r\n`
         })
         exportFile('plain', `new_${m3uFilename}`, content)
     }
+
+    useEffect(() => {
+        if (m3uOriginal) {
+            setupTableColumns()
+        }
+    }, [m3uOriginal, setupTableColumns])
+
+    useEffect(() => {
+        if (m3uOriginal && !m3uData) {
+            setupTableData()
+        }
+    }, [m3uOriginal, m3uData, setupTableData])
+
+    useEffect(() => {
+        if (workaround.data) {
+            setM3uData(workaround.data)
+            workaround.resolve()
+            setRefreshKey(Math.random())
+        }
+    }, [setM3uData, workaround])
+
+    const downloadSpecificChannels = useCallback(() => {
+        const filteredMediasSet = new Set()
+        const playlist = new M3uPlaylist()
+        const toKeep = inputRef.current.value?.split(',')
+        m3uOriginal.medias.forEach((media) => {
+            if (
+                toKeep.some(
+                    (item) =>
+                        media.name.toLowerCase().includes(item.toLowerCase()) &&
+                        !filteredMediasSet.has(media.location)
+                )
+            ) {
+                filteredMediasSet.add(media.location)
+                playlist.medias.push(omit(media, ['kodiProps']))
+            }
+        })
+        exportFile('plain', `new_${m3uFilename}`, playlist.getM3uString())
+    }, [m3uFilename, m3uOriginal])
 
     return (
         <>
@@ -248,13 +268,37 @@ const M3U = (props) => {
                             onChange={newFile}
                             acceptedFiles={['audio/x-mpegurl', 'audio/mpegurl']}
                             filesLimit={1}
-                            dropzoneText='To get started, add your playlist file here'
-                            useChipsForPreview={true}/>
+                            dropzoneText="------ Upload a file or enter a url instead ------"
+                            useChipsForPreview
+                        />
                     </Box>
                     // TODO: add a url field which gets the file
                 )}
                 {m3uData && columns && (
                     <Box>
+                        <Box
+                            display="flex"
+                            alignItems="center"
+                            gridGap={20}
+                            pt={2}
+                            pb={2}
+                        >
+                            <TextField
+                                label="Keep only (A,B,C,D...)"
+                                variant="outlined"
+                                fullWidth
+                                inputRef={inputRef}
+                                placeholder="кино,тнт,стс,TV1000,TV 1000,Amedia,Мосфильм,Премиальное,VHS,Комед,comed,квн,коломбо,Первый HD,VIP Premiere,Megahit,Viasat,Nat Geo,Animal Planet,Русский иллюзион,Paramount Comedy,Камеди,Драйв,Авто,Hits,детектив,бестселлер,Кухня,животны,планет,Discovery,Viasat,Морской,юмор,Хит,Блокбастер,МУЗ-ТВ,Russian Music,Europa Plus,BRIDGE TV,MTV,Mezzo,Music Box"
+                            />
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={downloadSpecificChannels}
+                                className={classes.button}
+                            >
+                                Keep
+                            </Button>
+                        </Box>
                         <MaterialTable
                             key={refreshKey}
                             tableRef={tableRef}
@@ -263,15 +307,15 @@ const M3U = (props) => {
                             data={m3uData.rows}
                             options={{
                                 padding: 'dense',
-                                pageSize: 60,
+                                pageSize: 100,
                                 draggable: false,
-                                pageSizeOptions: [20, 40, 60, 80, 100],
+                                pageSizeOptions: [50, 100, 200, 500],
                                 exportButton: true,
                                 exportCsv: exportFunction,
                                 filtering: true,
                                 search: false,
                                 selection: true,
-                                sorting: true
+                                sorting: true,
                             }}
                             actions={[
                                 {
@@ -285,30 +329,43 @@ const M3U = (props) => {
                                         })
                                         rows = reSortData(rows)
                                         setWorkaround({
-                                            data: { rows: rows }, resolve: () => {
-                                            }
+                                            data: { rows: rows },
+                                            resolve: () => {},
                                         })
-                                    }
+                                    },
+                                },
+                                {
+                                    tooltip: 'Enable Selected',
+                                    icon: 'toggle_on',
+                                    onClick: changeEnabledState(
+                                        true,
+                                        m3uData,
+                                        reSortData,
+                                        setWorkaround,
+                                        tableRef
+                                    ),
                                 },
                                 {
                                     tooltip: 'Disable Selected',
-                                    icon: 'block',
-                                    onClick: (evt, data) => {
-                                        let rows = m3uData.rows
-                                        const length = rows.length
-                                        data.forEach((d) => {
-                                            const index = rows.indexOf(d)
-                                            d.enabled = false
-                                            rows[index] = d
-                                            rows = arrayMove(rows, index, length)
-                                            rows = reSortData(rows)
-                                        })
-                                        setWorkaround({
-                                            data: { rows: rows }, resolve: () => {
-                                            }
-                                        })
-                                        tableRef.current.onAllSelected(false)
-                                    }
+                                    icon: 'toggle_off',
+                                    onClick: changeEnabledState(
+                                        false,
+                                        m3uData,
+                                        reSortData,
+                                        setWorkaround,
+                                        tableRef
+                                    ),
+                                },
+                                {
+                                    tooltip: 'Toggle disable state',
+                                    icon: 'published_with_changes',
+                                    onClick: changeEnabledState(
+                                        null,
+                                        m3uData,
+                                        reSortData,
+                                        setWorkaround,
+                                        tableRef
+                                    ),
                                 },
                                 {
                                     icon: 'delete-forever',
@@ -316,43 +373,48 @@ const M3U = (props) => {
                                     isFreeAction: true,
                                     onClick: (event, rowData) => {
                                         setConfirmOpen(true)
-                                    }
-                                }
+                                    },
+                                },
                             ]}
                             localization={{
                                 toolbar: {
-                                    exportName: 'Save new file'
-                                }
+                                    exportName: 'Save new file',
+                                },
                             }}
-                            detailPanel={rowData => {
+                            detailPanel={(rowData) => {
                                 return (
                                     <>
-                                        <p>URL: {rowData.url}</p>
+                                        <p>URL: {rowData.location}</p>
+                                        <p>Name: {rowData.name}</p>
+                                        <p>Group: {rowData.group}</p>
                                         <p>Duration: {rowData.duration}</p>
                                     </>
                                 )
                             }}
                             editable={{
-                                isEditable: rowData => true,
-                                isDeletable: rowData => true,
+                                isEditable: (rowData) => true,
+                                isDeletable: (rowData) => true,
                                 onRowAdd: onRowAdd,
                                 onRowUpdate: onRowUpdate,
-                                onRowDelete: onRowDelete
+                                onRowDelete: onRowDelete,
                             }}
                         />
                     </Box>
                 )}
-
             </Container>
             <Dialog
                 open={confirmOpen}
                 onClose={handleConfirmClose}
                 aria-labelledby="alert-dialog-title"
-                aria-describedby="alert-dialog-description">
-                <DialogTitle id="alert-dialog-title">Delete everything</DialogTitle>
+                aria-describedby="alert-dialog-description"
+            >
+                <DialogTitle id="alert-dialog-title">
+                    Delete everything
+                </DialogTitle>
                 <DialogContent>
                     <DialogContentText id="alert-dialog-description">
-                        This will delete everything and let you start afresh. Are your sure?
+                        This will delete everything and let you start afresh.
+                        Are your sure?
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
