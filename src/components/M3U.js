@@ -286,7 +286,7 @@ function Editor() {
                 variant="outlined"
                 fullWidth
                 inputRef={inputRef}
-                placeholder="кино,тнт,стс,TV1000,TV 1000,Amedia,Мосфильм,Премиальное,VHS,Комед,comed,квн,коломбо,Первый HD,VIP Premiere,Megahit,Viasat,Nat Geo,Animal Planet,Русский иллюзион,Paramount Comedy,Камеди,Драйв,Авто,Hits,детектив,бестселлер,Кухня,животны,планет,Discovery,Viasat,Морской,юмор,Хит,Блокбастер,МУЗ-ТВ,Russian Music,Europa Plus,BRIDGE TV,MTV,Mezzo,Music Box"
+                placeholder="кино,тнт,стс,TV1000,TV 1000,Amedia,Мосфильм,Премиальное,VHS,Комед,comed,квн,коломбо,Первый HD,VIP Premiere,Megahit,Viasat,Nat Geo,Animal Planet,Русский иллюзион,Paramount Comedy,Камеди,Драйв,Авто,Hits,детектив,бестселлер,Кухня,животны,планет,Discovery,Viasat,Морской,юмор,Хит,Блокбастер,МУЗ,Music,Europa Plus,BRIDGE TV,MTV,Mezzo,sci-fi,red,Fox,VF ,Fan,Зал,trash,Страшн,kino,cineman,KBC,TOP ,MM ,Z! ,Yosso,Dosug,SKY HIGH,Liberty,MS ,KLI ,Eye ,START ,magic,BOX,Retro,Fun,Eurodance,Криминал,beIN,роман,природ"
               />
               <Button
                 variant="contained"

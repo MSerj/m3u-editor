@@ -5,10 +5,7 @@ const tree = dirTree(
   "public/tvlogos",
   { extensions: /\.png/ },
   (item, PATH, stats) => {
-    item.url = item.path.replace(
-      "public/",
-      "https://scotteadams.github.io/m3yoyo/"
-    );
+    item.url = item.path.replace("public/", "https://m3u-editor.mserj.ru/");
   }
 );
 const jsonContent = JSON.stringify(tree.children);

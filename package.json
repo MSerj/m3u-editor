@@ -1,15 +1,11 @@
 {
   "name": "m3u-editor",
   "version": "1.0.0",
-  "homepage": "https://github.com/MSerj/m3u-editor",
   "private": false,
   "dependencies": {
     "@material-ui/core": "^4.9.8",
     "@material-ui/icons": "^4.9.1",
     "@material-ui/lab": "^4.0.0-alpha.47",
-    "@testing-library/jest-dom": "^4.2.4",
-    "@testing-library/react": "^9.3.2",
-    "@testing-library/user-event": "^7.1.2",
     "array-move": "^2.2.1",
     "cross-fetch": "^3.0.4",
     "directory-tree": "^2.2.4",
@@ -26,11 +22,8 @@
     "use-persisted-state": "^0.3.0"
   },
   "scripts": {
-    "predeploy": "npm run build",
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
     "grab-icons": "wget -O tvlogos.tar.xz https://github.com/picons/picons/releases/download/2020-03-28--19-06-07/snp-full.220x132-190x102.light.on.transparent_2020-03-28--19-06-07.hardlink.tar.xz",
     "extract-icons": "tar -zxvf tvlogos.tar.xz -C public/tvlogos --strip 1 && rm tvlogos.tar.xz",
     "grab-extract": "npm run grab-icons && npm run extract-icons",
@@ -52,6 +45,7 @@
     ]
   },
   "devDependencies": {
+    "@babel/plugin-proposal-private-property-in-object": "^7.21.11",
     "prettier": "2.0.2"
   }
 }
