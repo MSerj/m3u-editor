@@ -1,5 +1,6 @@
 import { Box } from "@material-ui/core";
 import TextField from "@material-ui/core/TextField";
+import Typography from "@material-ui/core/Typography";
 import { omit } from "lodash-es";
 import { DropzoneArea } from "material-ui-dropzone";
 import MaterialTable from "material-table";
@@ -20,31 +21,13 @@ import DialogContent from "@material-ui/core/DialogContent";
 import DialogContentText from "@material-ui/core/DialogContentText";
 import DialogTitle from "@material-ui/core/DialogTitle";
 import Button from "@material-ui/core/Button";
+import {
+  filterByLanguageCode,
+  filterByPriority,
+  changeEnabledState,
+} from "./M3U.config";
 
-const changeEnabledState = (
-  newState, // null = toggle
-  m3uData,
-  reSortData,
-  setWorkaround,
-  tableRef
-) => (evt, data) => {
-  let rows = m3uData.rows;
-  const length = rows.length;
-  data.forEach((d) => {
-    const index = rows.indexOf(d);
-    d.enabled = newState === null ? !d.enabled : newState;
-    rows[index] = d;
-    rows = arrayMove(rows, index, length);
-    rows = reSortData(rows);
-  });
-  setWorkaround({
-    data: { rows },
-    resolve: () => {},
-  });
-  tableRef.current.onAllSelected(false);
-};
-
-const M3U = (props) => {
+function Editor() {
   const classes = useStyles();
 
   let fileReader;
@@ -165,7 +148,7 @@ const M3U = (props) => {
       let data = m3uData.rows;
       data.push(newData);
       data = reSortData(data);
-      setWorkaround({ data: { rows: data }, resolve: resolve });
+      setWorkaround({ data: { rows: data }, resolve });
     });
 
   const onRowDelete = (oldData) =>
@@ -174,7 +157,7 @@ const M3U = (props) => {
       const index = data.indexOf(oldData);
       data.splice(index, 1);
       data = reSortData(data);
-      setWorkaround({ data: { rows: data }, resolve: resolve });
+      setWorkaround({ data: { rows: data }, resolve });
     });
 
   const onRowUpdate = (newData, oldData) =>
@@ -190,7 +173,7 @@ const M3U = (props) => {
         );
         data = reSortData(data);
       }
-      setWorkaround({ data: { rows: data }, resolve: resolve });
+      setWorkaround({ data: { rows: data }, resolve });
     });
 
   const exportFile = (dataType, fileName, data) => {
@@ -236,7 +219,8 @@ const M3U = (props) => {
     if (workaround.data) {
       setM3uData(workaround.data);
       workaround.resolve();
-      setRefreshKey(Math.random());
+      // setRefreshKey(Math.random()); // TODO this guy is freezing the tab completely, so we do a refresh instead
+      window.location.reload();
     }
   }, [setM3uData, workaround]);
 
@@ -244,18 +228,22 @@ const M3U = (props) => {
     const filteredMediasSet = new Set();
     const playlist = new M3uPlaylist();
     const toKeep = inputRef.current.value?.split(",");
-    m3uOriginal.medias.forEach((media) => {
-      if (
-        toKeep.some(
-          (item) =>
-            media.name.toLowerCase().includes(item.toLowerCase()) &&
-            !filteredMediasSet.has(media.location)
-        )
-      ) {
-        filteredMediasSet.add(media.location);
-        playlist.medias.push(omit(media, ["kodiProps"]));
+
+    filterByPriority(filterByLanguageCode(m3uOriginal.medias)).forEach(
+      (media) => {
+        if (
+          toKeep.some(
+            (item) =>
+              media.name.toLowerCase().includes(item.toLowerCase()) &&
+              !filteredMediasSet.has(media.location)
+          )
+        ) {
+          filteredMediasSet.add(media.location);
+
+          playlist.medias.push(omit(media, ["kodiProps"]));
+        }
       }
-    });
+    );
     exportFile("plain", `new_${m3uFilename}`, playlist.getM3uString());
   }, [m3uFilename, m3uOriginal]);
 
@@ -276,6 +264,22 @@ const M3U = (props) => {
         )}
         {m3uData && columns && (
           <Box>
+            <Box mt={2} textAlign="center">
+              <Typography>
+                Original: <b>{m3uOriginal.medias.length}</b> | Filtered by
+                language (RU/RO/MD):{" "}
+                <b>{filterByLanguageCode(m3uOriginal.medias).length}</b> |
+                Filtered by priority:{" "}
+                <b>{filterByPriority(m3uOriginal.medias).length}</b> | Total
+                filtered:{" "}
+                <b>
+                  {
+                    filterByPriority(filterByLanguageCode(m3uOriginal.medias))
+                      .length
+                  }
+                </b>
+              </Typography>
+            </Box>
             <Box display="flex" alignItems="center" gridGap={20} pt={2} pb={2}>
               <TextField
                 label="Keep only (A,B,C,D...)"
@@ -296,9 +300,9 @@ const M3U = (props) => {
             <MaterialTable
               key={refreshKey}
               tableRef={tableRef}
-              title={`file: ${m3uFilename}`}
+              title={`File: ${m3uFilename}`}
               columns={columns}
-              data={m3uData.rows}
+              data={filterByPriority(filterByLanguageCode(m3uData.rows))}
               options={{
                 padding: "dense",
                 pageSize: 100,
@@ -419,6 +423,6 @@ const M3U = (props) => {
       </Dialog>
     </>
   );
-};
+}
 
-export default M3U;
+export default Editor;
