@@ -1,5 +1,4 @@
 import React from 'react'
-import './App.css'
 import AppBar from '@material-ui/core/AppBar'
 import Typography from '@material-ui/core/Typography'
 import M3U from './M3U'
@@ -13,7 +12,6 @@ const App = () => {
 
     return (
         <div className="App">
-            <header className="App-header"></header>
             <main>
                 <AppBar position="static">
                     <Toolbar>
